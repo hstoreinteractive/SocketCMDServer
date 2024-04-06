@@ -1,0 +1,8 @@
+aliases:
+  reload:
+    - rl
+  quit:
+    - exit
+allow_modules: true
+modules:
+- module1
