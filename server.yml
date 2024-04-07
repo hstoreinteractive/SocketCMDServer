@@ -6,3 +6,4 @@ aliases:
 allow_modules: true
 modules:
 - example
+- sample.other_example
