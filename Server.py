@@ -1,6 +1,6 @@
 import logging
 import socket
-from typing import Callable
+from typing import Any, Callable
 from os.path import exists
 from os import mkdir
 from importlib import import_module, reload
@@ -43,8 +43,9 @@ class Request:
 
 class ServerModule:
     commands: dict[str, Callable[[Request], Response]] = {}
-    __parent__: 'Server' = None
-
+    __overwrites__: dict[str, Callable[['ServerModule'], None]] = {}
+    __parent__: 'Server'
+    
     def __init__(self, namespace: str):
         self.commands = {}
         self.namespace = namespace
@@ -62,6 +63,12 @@ class ServerModule:
 
         return args
 
+    def overwrite(self, func: Callable[['ServerModule'], None]):
+        def wrapper():
+            logging.getLogger('hbank_database_system').warning("This Cannot Be Called")
+
+        self.__overwrites__[func.__name__] = func
+        return wrapper
 
 class Server:
     __none__: None = None
@@ -71,7 +78,7 @@ class Server:
 
     def __init__(self, address: tuple[str, int]):
         self.allow_modules: bool = False
-        self.config = None
+        self.config: Any | None = None
         self.address = address
         self.load_config()
         self.__config__()
@@ -111,6 +118,7 @@ class Server:
                 f"[MODULES]: Loaded '{serverModule.namespace}' from '{module}'"
             )
             self.commands |= serverModule.commands
+            self.__overwrites__(serverModule, '__init__')
 
     def load_config(self):
         if not exists('./server.yml'):
@@ -132,7 +140,7 @@ class Server:
             dump(data, config_file)
             config_file.close()
         config_file = open("server.yml", 'r')
-        config = safe_load(config_file)
+        config: dict[str, str | dict[str, Any] | list[Any] | int | float | bool] = safe_load(config_file)
         config_file.close()
         self.config = config
 
@@ -140,8 +148,15 @@ class Server:
         self.commands = self.__internal_commands__
         self.load_config()
         self.__config__()
+    
+    def __overwrites__(self, module: ServerModule, event: str):
+        for key in module.__overwrites__:
+            if key == event:
+                module.__overwrites__[key](module)
 
     def __config__(self):
+        if self.config is None:
+            return
         self.allow_modules = self.config['allow_modules']
         if self.allow_modules:
             for module in self.config['modules']:
