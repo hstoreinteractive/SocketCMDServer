@@ -6,7 +6,7 @@ from os import mkdir
 from importlib import import_module, reload
 from yaml import safe_load, dump
 
-logging.getLogger('hbank_database_system').setLevel(logging.INFO)
+logging.getLogger('thehsi_socketcmdserver_logger').setLevel(logging.INFO)
 
 
 # CODES TABLE
@@ -56,7 +56,7 @@ class ServerModule:
     def on(self, cmd: str):
         def args(func: Callable[[Request], Response]):
             def wrapper():
-                logging.getLogger('hbank_database_system').warning("This Cannot Be Called")
+                logging.getLogger('thehsi_socketcmdserver_logger').warning("This Cannot Be Called")
 
             self.commands[cmd] = func
             return wrapper
@@ -65,7 +65,7 @@ class ServerModule:
 
     def overwrite(self, func: Callable[['ServerModule'], None]):
         def wrapper():
-            logging.getLogger('hbank_database_system').warning("This Cannot Be Called")
+            logging.getLogger('thehsi_socketcmdserver_logger').warning("This Cannot Be Called")
 
         self.__overwrites__[func.__name__] = func
         return wrapper
@@ -88,7 +88,7 @@ class Server:
     def on(self, cmd: str):
         def args(func: Callable[[Request], Response]):
             def wrapper():
-                logging.getLogger('hbank_database_system').warning("This Cannot Be Called")
+                logging.getLogger('thehsi_socketcmdserver_logger').warning("This Cannot Be Called")
 
             self.__internal_commands__[cmd] = func
             self.commands[cmd] = func
@@ -102,7 +102,7 @@ class Server:
             imported_ = import_module(f'modules.{module}', module)
             imported = reload(imported_)
         except ImportError as _:
-            logging.getLogger('hbank_database_system').error(
+            logging.getLogger('thehsi_socketcmdserver_logger').error(
                 f"[MODULES]: Cannot find '{module}'"
             )
             return
@@ -114,7 +114,7 @@ class Server:
 
         for serverModule in server_modules:
             serverModule.__parent__ = self
-            logging.getLogger('hbank_database_system').info(
+            print(
                 f"[MODULES]: Loaded '{serverModule.namespace}' from '{module}'"
             )
             self.commands |= serverModule.commands
@@ -122,7 +122,7 @@ class Server:
 
     def load_config(self):
         if not exists('./server.yml'):
-            logging.getLogger('hbank_database_system').warning(
+            logging.getLogger('thehsi_socketcmdserver_logger').warning(
                 "[CONFIG]: Cannot find 'server.yml' in current directory, creating it"
             )
             config_file = open("server.yml", 'w')
@@ -180,6 +180,9 @@ class Server:
             val = self.__handle__(client_socket, address)
             if val == 5:
                 self.kill = True
+            if val == 4:
+                client_socket.close()
+                break
             if val != 0:
                 return val
 
@@ -202,6 +205,9 @@ class Server:
 
             if response.code == 511:
                 return 5
+            
+            if response.code == 303:
+                return 4
 
             return 0
         except (ConnectionResetError, ConnectionAbortedError) as _:
