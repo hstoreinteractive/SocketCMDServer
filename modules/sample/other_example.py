@@ -9,4 +9,4 @@ def __init__(self: ServerModule):
 
 @module.on("sample")
 def example(request: Request) -> Response:
-    return request.fabricate_response(200, f'Here is the servre IP: {module.get_server().address[0]}')
+    return request.fabricate_response(200, f'Here is the server IP: {module.get_server().address[0]}')
